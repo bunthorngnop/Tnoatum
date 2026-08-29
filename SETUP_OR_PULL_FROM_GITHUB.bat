@@ -4,20 +4,21 @@ cd /d "%~dp0"
 echo Tnoat Tum Cafe - Safe Setup or Pull
 set "EXPECTED_REMOTE=https://github.com/bunthorngnop/Tnoatum.git"
 set "EXPECTED_BRANCH=main"
+set GIT=git -c "safe.directory=%CD%"
 
 where git >nul 2>&1 || goto :no_git
 where py >nul 2>&1 || goto :no_python
 py -3 --version >nul 2>&1 || goto :no_python
-git rev-parse --is-inside-work-tree >nul 2>&1 || goto :clone_first
-git remote get-url origin >nul 2>&1 || goto :no_remote
-for /f "delims=" %%R in ('git remote get-url origin') do set "ACTUAL_REMOTE=%%R"
+%GIT% rev-parse --is-inside-work-tree >nul 2>&1 || goto :clone_first
+%GIT% remote get-url origin >nul 2>&1 || goto :no_remote
+for /f "delims=" %%R in ('%GIT% remote get-url origin') do set "ACTUAL_REMOTE=%%R"
 if /i not "%ACTUAL_REMOTE%"=="%EXPECTED_REMOTE%" goto :wrong_remote
-for /f %%B in ('git branch --show-current') do set "BRANCH=%%B"
+for /f %%B in ('%GIT% branch --show-current') do set "BRANCH=%%B"
 if /i not "%BRANCH%"=="%EXPECTED_BRANCH%" goto :wrong_branch
 
-git diff --quiet || goto :dirty
-git diff --cached --quiet || goto :dirty
-git pull --ff-only || goto :error
+%GIT% diff --quiet || goto :dirty
+%GIT% diff --cached --quiet || goto :dirty
+%GIT% pull --ff-only || goto :error
 
 if not exist ".venv\Scripts\python.exe" py -3 -m venv .venv || goto :error
 call ".venv\Scripts\activate.bat" || goto :error
