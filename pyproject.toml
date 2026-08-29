@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tnoat-tum-cafe"
+version = "0.1.0"
+description = "Local-first finance foundation for Tnoat Tum Cafe"
+requires-python = ">=3.11"
+dependencies = [
+  "alembic>=1.13,<2",
+  "python-dotenv>=1.0,<2",
+  "python-telegram-bot>=22,<23",
+  "SQLAlchemy>=2.0,<3",
+  "tzdata>=2025.2",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8,<9"]
+
+[project.scripts]
+tnoat-cafe = "tnoat_tum_cafe.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"

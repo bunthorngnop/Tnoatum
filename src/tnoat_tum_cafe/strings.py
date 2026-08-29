@@ -1,0 +1,16 @@
+"""Centralized user-facing strings for future English/Khmer localization."""
+
+WELCOME = "☕ Tnoat Tum Cafe\nSimple for staff • Strict with money"
+UNAUTHORIZED = "🔒 You are not authorized for this action."
+NO_BUSINESS_DAY = "⚠️ No open business day. Ask an authorized cashier/manager to open one."
+MAIN_MENU = "Choose an action / សូមជ្រើសរើស៖"
+NEW_SALE = "🧾 NEW SALE / លក់ថ្មី"
+MY_ACCOUNT = "👤 MY ACCOUNT / គណនីខ្ញុំ"
+CORRECT_LAST = "↩️ Correct Last Sale / កែការលក់ចុងក្រោយ"
+CART = "🛒 Cart / កន្ត្រក"
+ADD_MORE = "➕ Add More / បន្ថែម"
+CONFIRM = "✅ Confirm Sale / បញ្ជាក់"
+CANCEL = "❌ Cancel / បោះបង់"
+BACK = "⬅️ Back / ថយក្រោយ"
+MANUAL_ITEM = "✍️ Custom Item / មុខទំនិញផ្ទាល់ខ្លួន"
+

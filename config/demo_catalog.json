@@ -1,0 +1,34 @@
+{
+  "notice": "SAMPLE/DEMO ONLY - NOT THE OFFICIAL TNOAT TUM CAFE MENU",
+  "categories": [
+    {
+      "code": "DEMO_COFFEE",
+      "name": "☕ Demo Coffee",
+      "icon": "☕",
+      "sort_order": 10,
+      "products": [
+        {
+          "code": "DEMO_FIXED_COFFEE",
+          "name": "SAMPLE Fixed Coffee",
+          "pricing_mode": "FIXED_PRICE",
+          "fixed_price_minor": 4000,
+          "currency": "KHR"
+        }
+      ]
+    },
+    {
+      "code": "DEMO_FOOD",
+      "name": "🍚 Demo Open-Price Food",
+      "icon": "🍚",
+      "sort_order": 20,
+      "products": [
+        {
+          "code": "DEMO_OPEN_FOOD",
+          "name": "SAMPLE Made-to-order Dish",
+          "pricing_mode": "OPEN_PRICE",
+          "suggested_prices": []
+        }
+      ]
+    }
+  ]
+}
