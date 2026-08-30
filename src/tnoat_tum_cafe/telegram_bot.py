@@ -26,7 +26,9 @@ logger = logging.getLogger(__name__)
 def _main_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([
         [InlineKeyboardButton(strings.NEW_SALE, callback_data="main:new")],
+        [InlineKeyboardButton(strings.NEW_EXPENSE, callback_data="main:expense")],
         [InlineKeyboardButton(strings.MY_ACCOUNT, callback_data="main:account")],
+        [InlineKeyboardButton(strings.MY_EXPENSES, callback_data="main:myexpenses"), InlineKeyboardButton(strings.PENDING_APPROVALS, callback_data="main:approvals")],
         [InlineKeyboardButton(strings.CORRECT_LAST, callback_data="main:correct")],
     ])
 
@@ -431,12 +433,16 @@ def build_application(settings: Settings) -> Application:
     if not settings.telegram_bot_token:
         raise ValueError("TELEGRAM_BOT_TOKEN is required to build the live Telegram application")
     engine = create_database_engine(settings.database_url)
-    application = ApplicationBuilder().token(settings.telegram_bot_token).build()
+    from .telegram_expenses import build_approval_handler, build_expense_handler, expense_reply_command, startup_notification_dispatch
+    application = ApplicationBuilder().token(settings.telegram_bot_token).post_init(startup_notification_dispatch).build()
     application.bot_data.update(settings=settings, session_factory=session_factory(engine))
+    application.add_handler(build_expense_handler(), group=0)
+    application.add_handler(build_approval_handler(), group=1)
+    application.add_handler(CommandHandler("expense_reply", expense_reply_command), group=1)
     conversation = ConversationHandler(
         entry_points=[CommandHandler("start", start)],
         states={
-            SELECTING: [CallbackQueryHandler(main_action, pattern=r"^main:"), CallbackQueryHandler(add_more, pattern=r"^more$"), CallbackQueryHandler(select_category, pattern=r"^cat:\d+$"), CallbackQueryHandler(select_product, pattern=r"^prod:\d+$"), CallbackQueryHandler(manual_start, pattern=r"^manual$"), CallbackQueryHandler(select_price_currency, pattern=r"^pricecur:(KHR|USD)$"), CallbackQueryHandler(select_suggested_price, pattern=r"^price:(KHR|USD):\d+$"), CallbackQueryHandler(quantity, pattern=r"^qty:"), CallbackQueryHandler(show_cart, pattern=r"^cart$"), CallbackQueryHandler(select_discount, pattern=r"^disc:(\d+|custom)$"), CallbackQueryHandler(select_payment, pattern=r"^pay:"), CallbackQueryHandler(confirm_sale, pattern=r"^confirm:"), CallbackQueryHandler(cancel, pattern=r"^cancel$")],
+            SELECTING: [CallbackQueryHandler(main_action, pattern=r"^main:(new|account|correct)$"), CallbackQueryHandler(add_more, pattern=r"^more$"), CallbackQueryHandler(select_category, pattern=r"^cat:\d+$"), CallbackQueryHandler(select_product, pattern=r"^prod:\d+$"), CallbackQueryHandler(manual_start, pattern=r"^manual$"), CallbackQueryHandler(select_price_currency, pattern=r"^pricecur:(KHR|USD)$"), CallbackQueryHandler(select_suggested_price, pattern=r"^price:(KHR|USD):\d+$"), CallbackQueryHandler(quantity, pattern=r"^qty:"), CallbackQueryHandler(show_cart, pattern=r"^cart$"), CallbackQueryHandler(select_discount, pattern=r"^disc:(\d+|custom)$"), CallbackQueryHandler(select_payment, pattern=r"^pay:"), CallbackQueryHandler(confirm_sale, pattern=r"^confirm:"), CallbackQueryHandler(cancel, pattern=r"^cancel$")],
             MANUAL_NAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, manual_name)],
             PRICE_INPUT: [MessageHandler(filters.TEXT & ~filters.COMMAND, price_input)],
             QUANTITY_OTHER: [MessageHandler(filters.TEXT & ~filters.COMMAND, quantity_other)],
@@ -447,8 +453,8 @@ def build_application(settings: Settings) -> Application:
         fallbacks=[CommandHandler("cancel", cancel), CommandHandler("start", start), CommandHandler("myid", my_id)],
         allow_reentry=True,
     )
-    application.add_handler(CommandHandler("myid", my_id))
-    application.add_handler(conversation)
+    application.add_handler(CommandHandler("myid", my_id), group=0)
+    application.add_handler(conversation, group=2)
     application.add_error_handler(error_handler)
     return application
 

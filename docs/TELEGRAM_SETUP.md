@@ -36,6 +36,22 @@ python -m tnoat_tum_cafe.cli run-bot
 9. Open `👤 MY ACCOUNT`; only your activity should appear.
 10. Use `Correct Last Sale`, enter a reason, and verify the receipt becomes reversed without disappearing.
 
+## Phase 2 expense flow
+
+1. Configure real expense limits and policies using the commands in `README.md`.
+2. Start the bot and tap `💸 EXPENSE` or send `/expense`.
+3. Select category, KHR/USD, exact amount, matching Cash or ABA/KHQR source, and reason.
+4. Attach one photo/document receipt. Runtime files use generated names under the ignored receipt directory.
+5. Review and submit. With the safest defaults, the request remains `PENDING` and creates no ledger entry.
+6. The owner (`166792174`) receives a private request with `✅ APPROVE`, `❌ REJECT`, and `💬 ASK QUESTION`.
+7. Approval posts exactly one expense and notifies the requester. Rejection requires a reason and posts no expense.
+8. A question keeps the request pending. The requester replies with `/expense_reply REQUEST_ID response text`.
+9. Staff can send `/myexpenses`; authorized approvers can send `/approvals`.
+
+The confirmed bot username is `@TnoatTum_Cafe_bot`. Numeric Telegram IDs—not usernames—control authorization.
+
+If the bot is offline, notification outbox rows remain pending and are retried when it starts again.
+
 ABA/KHQR ledger entries remain distinct from Cash. Cross-currency split payment stays disabled until an explicit exchange-rate policy is approved.
 
 ## Tests without Telegram

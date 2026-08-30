@@ -41,6 +41,23 @@ class SaleStatus(StrEnum):
     REVERSED = "REVERSED"
 
 
+class ExpenseRequestStatus(StrEnum):
+    PENDING = "PENDING"
+    APPROVED = "APPROVED"
+    REJECTED = "REJECTED"
+
+
+class ExpenseStatus(StrEnum):
+    POSTED = "POSTED"
+    REVERSED = "REVERSED"
+
+
+class ExpensePaymentSource(StrEnum):
+    KHR_CASH = "KHR_CASH"
+    USD_CASH = "USD_CASH"
+    ABA_KHQR = "ABA_KHQR"
+
+
 class Role(Base):
     __tablename__ = "roles"
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -302,6 +319,144 @@ class SaleCorrection(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
 
 
+class ExpenseCategory(Base):
+    __tablename__ = "expense_categories"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    code: Mapped[str] = mapped_column(String(60), unique=True)
+    name: Mapped[str] = mapped_column(String(120))
+    icon: Mapped[str | None] = mapped_column(String(16))
+    receipt_required: Mapped[bool] = mapped_column(Boolean, default=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    sort_order: Mapped[int] = mapped_column(Integer, default=0)
+
+
+class ExpenseLimit(Base):
+    __tablename__ = "expense_limits"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    role_id: Mapped[int | None] = mapped_column(ForeignKey("roles.id", ondelete="RESTRICT"))
+    user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="RESTRICT"))
+    currency: Mapped[str] = mapped_column(String(3))
+    amount_minor: Mapped[int] = mapped_column(BigInteger)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    created_by_user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="RESTRICT"))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    __table_args__ = (
+        CheckConstraint("currency IN ('KHR','USD')", name="ck_expense_limit_currency"),
+        CheckConstraint("amount_minor >= 0", name="ck_expense_limit_amount"),
+        CheckConstraint("(role_id IS NOT NULL AND user_id IS NULL) OR (role_id IS NULL AND user_id IS NOT NULL)", name="ck_expense_limit_scope"),
+        UniqueConstraint("role_id", "currency", name="uq_expense_limit_role_currency"),
+        UniqueConstraint("user_id", "currency", name="uq_expense_limit_user_currency"),
+    )
+
+
+class ExpenseRequest(Base):
+    __tablename__ = "expense_requests"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    request_number: Mapped[str] = mapped_column(String(40), unique=True)
+    business_day_id: Mapped[int] = mapped_column(ForeignKey("business_days.id", ondelete="RESTRICT"))
+    requester_user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="RESTRICT"))
+    category_id: Mapped[int] = mapped_column(ForeignKey("expense_categories.id", ondelete="RESTRICT"))
+    amount_minor: Mapped[int] = mapped_column(BigInteger)
+    currency: Mapped[str] = mapped_column(String(3))
+    payment_source: Mapped[str] = mapped_column(String(20))
+    reason: Mapped[str] = mapped_column(Text)
+    status: Mapped[str] = mapped_column(String(16), default=ExpenseRequestStatus.PENDING.value)
+    authority_limit_minor: Mapped[int | None] = mapped_column(BigInteger)
+    was_over_limit: Mapped[bool] = mapped_column(Boolean, default=True)
+    receipt_required_snapshot: Mapped[bool] = mapped_column(Boolean, default=False)
+    submitted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    decided_by_user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="RESTRICT"))
+    decision_reason: Mapped[str | None] = mapped_column(Text)
+    category: Mapped[ExpenseCategory] = relationship()
+    attachments: Mapped[list[ExpenseAttachment]] = relationship(back_populates="request", order_by="ExpenseAttachment.id")
+    __table_args__ = (
+        CheckConstraint("amount_minor > 0", name="ck_expense_request_amount"),
+        CheckConstraint("currency IN ('KHR','USD')", name="ck_expense_request_currency"),
+        CheckConstraint("payment_source IN ('KHR_CASH','USD_CASH','ABA_KHQR')", name="ck_expense_request_source"),
+        CheckConstraint("status IN ('PENDING','APPROVED','REJECTED')", name="ck_expense_request_status"),
+        CheckConstraint("authority_limit_minor IS NULL OR authority_limit_minor >= 0", name="ck_expense_request_limit"),
+    )
+
+
+class ExpenseAttachment(Base):
+    __tablename__ = "expense_attachments"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    expense_request_id: Mapped[int] = mapped_column(ForeignKey("expense_requests.id", ondelete="RESTRICT"))
+    telegram_file_id: Mapped[str] = mapped_column(String(255))
+    telegram_file_unique_id: Mapped[str | None] = mapped_column(String(255))
+    media_type: Mapped[str] = mapped_column(String(20))
+    mime_type: Mapped[str | None] = mapped_column(String(100))
+    file_size: Mapped[int | None] = mapped_column(BigInteger)
+    local_relative_path: Mapped[str | None] = mapped_column(String(255))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    request: Mapped[ExpenseRequest] = relationship(back_populates="attachments")
+    __table_args__ = (
+        CheckConstraint("media_type IN ('PHOTO','DOCUMENT')", name="ck_expense_attachment_media_type"),
+        CheckConstraint("file_size IS NULL OR file_size >= 0", name="ck_expense_attachment_size"),
+    )
+
+
+class ExpenseApprovalEvent(Base):
+    __tablename__ = "expense_approval_events"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    expense_request_id: Mapped[int] = mapped_column(ForeignKey("expense_requests.id", ondelete="RESTRICT"))
+    event_type: Mapped[str] = mapped_column(String(40))
+    actor_user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="RESTRICT"))
+    message: Mapped[str | None] = mapped_column(Text)
+    correlation_id: Mapped[str] = mapped_column(String(100))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    __table_args__ = (UniqueConstraint("event_type", "correlation_id", name="uq_expense_event_idempotency"),)
+
+
+class Expense(Base):
+    __tablename__ = "expenses"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    expense_number: Mapped[str] = mapped_column(String(40), unique=True)
+    expense_request_id: Mapped[int] = mapped_column(ForeignKey("expense_requests.id", ondelete="RESTRICT"), unique=True)
+    business_day_id: Mapped[int] = mapped_column(ForeignKey("business_days.id", ondelete="RESTRICT"))
+    requester_user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="RESTRICT"))
+    category_id: Mapped[int] = mapped_column(ForeignKey("expense_categories.id", ondelete="RESTRICT"))
+    amount_minor: Mapped[int] = mapped_column(BigInteger)
+    currency: Mapped[str] = mapped_column(String(3))
+    payment_source: Mapped[str] = mapped_column(String(20))
+    reason: Mapped[str] = mapped_column(Text)
+    status: Mapped[str] = mapped_column(String(16), default=ExpenseStatus.POSTED.value)
+    posted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    posted_by_user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="RESTRICT"))
+    reversed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    reversed_by_user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="RESTRICT"))
+    reversal_reason: Mapped[str | None] = mapped_column(Text)
+    __table_args__ = (
+        CheckConstraint("amount_minor > 0", name="ck_expense_amount"),
+        CheckConstraint("currency IN ('KHR','USD')", name="ck_expense_currency"),
+        CheckConstraint("payment_source IN ('KHR_CASH','USD_CASH','ABA_KHQR')", name="ck_expense_source"),
+        CheckConstraint("status IN ('POSTED','REVERSED')", name="ck_expense_status"),
+    )
+
+
+class ExpenseCorrection(Base):
+    __tablename__ = "expense_corrections"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    original_expense_id: Mapped[int] = mapped_column(ForeignKey("expenses.id", ondelete="RESTRICT"), unique=True)
+    reason: Mapped[str] = mapped_column(Text)
+    actor_user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="RESTRICT"))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+
+
+class NotificationOutbox(Base):
+    __tablename__ = "notification_outbox"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    recipient_user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="RESTRICT"))
+    notification_type: Mapped[str] = mapped_column(String(50))
+    entity_type: Mapped[str] = mapped_column(String(40))
+    entity_id: Mapped[str] = mapped_column(String(80))
+    message: Mapped[str] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    attempts: Mapped[int] = mapped_column(Integer, default=0)
+
+
 @event.listens_for(AuditLog, "before_update")
 @event.listens_for(AuditLog, "before_delete")
 def _prevent_audit_mutation(_mapper, _connection, _target) -> None:
@@ -316,7 +471,8 @@ def _prevent_financial_detail_update(_mapper, _connection, _target) -> None:
     raise ValueError("Posted financial details are immutable; use a reversal")
 
 
-for _immutable_detail in (SaleItem, SalePayment, LedgerEntry, SaleCorrection):
+for _immutable_detail in (SaleItem, SalePayment, LedgerEntry, SaleCorrection, ExpenseAttachment, ExpenseApprovalEvent, ExpenseCorrection):
     event.listen(_immutable_detail, "before_update", _prevent_financial_detail_update)
     event.listen(_immutable_detail, "before_delete", _prevent_financial_delete)
 event.listen(Sale, "before_delete", _prevent_financial_delete)
+event.listen(Expense, "before_delete", _prevent_financial_delete)

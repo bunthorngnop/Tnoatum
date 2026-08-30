@@ -1,12 +1,12 @@
 # Tnoat Tum Cafe
 
-Phase 1 local-Windows-first Telegram sales system. The authoritative requirements are in `TNOAT_TUM_CAFE_CODEX_MASTER_BUILD_PROMPT.md`.
+Phase 2 local-Windows-first Telegram sales and controlled-expense system. The authoritative requirements are in `TNOAT_TUM_CAFE_CODEX_MASTER_BUILD_PROMPT.md`.
 
 ## Current scope
 
-Implemented: the Phase 0 foundation plus configurable categories/products, fixed/open/manual pricing, carts, quantities, exact KHR/USD money, configured discounts, Cash/ABA/KHQR, same-currency split payment, review/confirmation, staff account activity, idempotent posting, ledger entries, and reversal-based corrections.
+Implemented: the Phase 0/1 foundation plus configurable expense categories and authority limits, exact KHR/USD expenses, Cash/ABA separation, receipt attachments, pending approvals, owner approve/reject/ask-question flows, requester replies/notifications, immutable expense history, and controlled reversals.
 
-Not yet implemented: expenses, opening/expected cash, final closing, dashboard, automated DB backup/restore, OCR, voice, or AI.
+Not yet implemented: opening/expected cash, final closing, dashboard, automated DB backup/restore, OCR, voice, or AI.
 
 ## Local installation
 
@@ -55,6 +55,34 @@ python -m tnoat_tum_cafe.cli add-discount 5 --actor-telegram-id YOUR_OWNER_ID
 
 See `docs/TELEGRAM_SETUP.md` for the complete manual flow.
 
+## Phase 2 expense configuration
+
+No monetary expense limit is assumed. Configure owner-approved limits explicitly:
+
+```powershell
+python -m tnoat_tum_cafe.cli set-expense-limit --role STAFF --currency KHR --amount OWNER_APPROVED_AMOUNT --actor-telegram-id 166792174
+python -m tnoat_tum_cafe.cli set-expense-limit --role STAFF --currency USD --amount OWNER_APPROVED_AMOUNT --actor-telegram-id 166792174
+```
+
+User-specific limits override role limits:
+
+```powershell
+python -m tnoat_tum_cafe.cli set-expense-limit --user-telegram-id STAFF_NUMERIC_ID --currency KHR --amount OWNER_APPROVED_AMOUNT --actor-telegram-id 166792174
+```
+
+Configure category receipt policy:
+
+```powershell
+python -m tnoat_tum_cafe.cli set-expense-category-receipt --category-code REPAIR --required true --actor-telegram-id 166792174
+```
+
+The safest `.env.example` policy keeps within-limit expenses pending and requires receipts globally. Change these only with owner approval:
+
+```env
+EXPENSE_WITHIN_LIMIT_POSTS_IMMEDIATELY=false
+REQUIRE_RECEIPT_FOR_ALL_EXPENSES=true
+```
+
 ## Tests
 
 ```powershell
@@ -70,7 +98,7 @@ The default runtime database is `data/tnoat_tum_cafe.sqlite3`, excluded from Git
 python -m alembic upgrade head
 ```
 
-Migration `0001_phase0_foundation` creates identity and audit foundations. Migration `0002_phase1_sales` adds catalogs, sales/item snapshots, payments, ledger entries, and correction records. Never edit financial history directly or replace a live database during a source update.
+Migration `0001_phase0_foundation` creates identity and audit foundations. Migration `0002_phase1_sales` adds sales. Migration `0003_phase2_expenses` adds categories, limits, requests, attachments, approval events, expenses, corrections, and durable notification outbox records. Never edit financial history directly or replace a live database during a source update.
 
 ## GitHub workflows
 

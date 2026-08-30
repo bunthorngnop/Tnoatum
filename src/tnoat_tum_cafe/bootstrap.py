@@ -4,7 +4,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from .config import Settings
-from .models import AppSetting, DiscountRule, Permission, Role, RolePermission, User, UserRole
+from .models import AppSetting, DiscountRule, ExpenseCategory, Permission, Role, RolePermission, User, UserRole
 from .services.audit import append_audit
 
 
@@ -15,6 +15,8 @@ PERMISSIONS = {
     "catalog.manage": "Manage verified product categories, products, and prices",
     "expense.create": "Create permitted expenses (Phase 2)",
     "expense.approve": "Approve expense requests (Phase 2)",
+    "expense.correct": "Reverse a posted expense while preserving history",
+    "expense.view_all": "View all staff expense requests and posted expenses",
     "cash.open": "Record opening cash (Phase 3)",
     "business_day.close": "Perform business-day closing (Phase 4)",
     "business_day.reopen": "Reopen a closed business day with audit",
@@ -66,6 +68,16 @@ def seed_foundation(session: Session, settings: Settings) -> None:
 
     if session.scalar(select(DiscountRule).where(DiscountRule.basis_points == 0)) is None:
         session.add(DiscountRule(name="No discount", basis_points=0, requires_approval=False))
+
+    default_expense_categories = (
+        ("INGREDIENTS", "Ingredients", "🥬"), ("ICE", "Ice", "🧊"),
+        ("MILK", "Milk", "🥛"), ("FOOD_SUPPLIES", "Food Supplies", "🍚"),
+        ("DELIVERY", "Delivery", "🛵"), ("REPAIR", "Repair", "🔧"),
+        ("UTILITIES", "Utilities", "💡"), ("OTHER", "Other", "📦"),
+    )
+    for position, (code, name, icon) in enumerate(default_expense_categories):
+        if session.scalar(select(ExpenseCategory).where(ExpenseCategory.code == code)) is None:
+            session.add(ExpenseCategory(code=code, name=name, icon=icon, sort_order=position * 10))
 
     owner_role = roles["OWNER"]
     for telegram_id in settings.owner_telegram_ids:

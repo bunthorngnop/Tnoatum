@@ -46,6 +46,11 @@ class Settings:
     backup_retention_days: int
     telegram_bot_token: str = ""
     enable_same_currency_split: bool = True
+    telegram_bot_username: str = "TnoatTum_Cafe_bot"
+    expense_within_limit_posts_immediately: bool = False
+    require_receipt_for_all_expenses: bool = True
+    expense_attachment_directory: Path = Path("receipts")
+    max_expense_attachment_bytes: int = 10_000_000
 
     @property
     def timezone(self) -> ZoneInfo:
@@ -62,6 +67,9 @@ def load_settings(env_file: Path | None = None) -> Settings:
     retention = int(os.getenv("BACKUP_RETENTION_DAYS", "30"))
     if retention < 1:
         raise ValueError("BACKUP_RETENTION_DAYS must be positive")
+    max_attachment_bytes = int(os.getenv("MAX_EXPENSE_ATTACHMENT_BYTES", "10000000"))
+    if max_attachment_bytes < 1:
+        raise ValueError("MAX_EXPENSE_ATTACHMENT_BYTES must be positive")
     return Settings(
         shop_name=os.getenv("SHOP_NAME", "Tnoat Tum Cafe").strip(),
         timezone_name=timezone_name,
@@ -75,4 +83,9 @@ def load_settings(env_file: Path | None = None) -> Settings:
         backup_retention_days=retention,
         telegram_bot_token=os.getenv("TELEGRAM_BOT_TOKEN", "").strip(),
         enable_same_currency_split=os.getenv("ENABLE_SAME_CURRENCY_SPLIT", "true").strip().lower() in {"1", "true", "yes", "on"},
+        telegram_bot_username=os.getenv("TELEGRAM_BOT_USERNAME", "TnoatTum_Cafe_bot").strip().lstrip("@"),
+        expense_within_limit_posts_immediately=os.getenv("EXPENSE_WITHIN_LIMIT_POSTS_IMMEDIATELY", "false").strip().lower() in {"1", "true", "yes", "on"},
+        require_receipt_for_all_expenses=os.getenv("REQUIRE_RECEIPT_FOR_ALL_EXPENSES", "true").strip().lower() in {"1", "true", "yes", "on"},
+        expense_attachment_directory=Path(os.getenv("EXPENSE_ATTACHMENT_DIRECTORY", "receipts")),
+        max_expense_attachment_bytes=max_attachment_bytes,
     )

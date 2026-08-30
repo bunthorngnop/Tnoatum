@@ -21,7 +21,7 @@ GitHub synchronizes source code. It does **not** back up or transfer the live fi
    python -m tnoat_tum_cafe.cli bootstrap
    ```
 
-6. Follow `docs/TELEGRAM_SETUP.md` to load an owner-verified catalog, open the business day, and start the bot.
+6. Follow `docs/TELEGRAM_SETUP.md` to load an owner-verified catalog, configure owner-approved expense limits/receipt policies, open the business day, and start the bot.
 
 ## Updating an existing PC
 

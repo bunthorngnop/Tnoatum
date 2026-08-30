@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 from datetime import datetime
 from pathlib import Path
+from uuid import uuid4
 import subprocess
 import sys
 
@@ -11,11 +12,13 @@ from sqlalchemy import text
 from .bootstrap import seed_foundation
 from .config import load_settings
 from .db import create_database_engine, session_factory
-from .models import DiscountRule, Role, User, UserRole
+from .models import DiscountRule, ExpenseCategory, ExpenseLimit, Role, User, UserRole
 from .services.audit import append_audit
 from .services.auth import get_user_by_telegram_id, has_permission
 from .services.business_days import open_business_day
 from .services.catalog import import_catalog
+from .services.expenses import reverse_expense
+from .services.money import parse_money
 
 
 def _upgrade() -> None:
@@ -46,6 +49,21 @@ def main() -> None:
     user_parser.add_argument("--name", required=True)
     user_parser.add_argument("--role", choices=("STAFF", "CASHIER", "MANAGER", "OWNER"), required=True)
     user_parser.add_argument("--actor-telegram-id", type=int, required=True)
+    limit_parser = subparsers.add_parser("set-expense-limit")
+    scope = limit_parser.add_mutually_exclusive_group(required=True)
+    scope.add_argument("--role", choices=("STAFF", "CASHIER", "MANAGER", "OWNER"))
+    scope.add_argument("--user-telegram-id", type=int)
+    limit_parser.add_argument("--currency", choices=("KHR", "USD"), required=True)
+    limit_parser.add_argument("--amount", required=True, help="Whole riel for KHR or decimal USD")
+    limit_parser.add_argument("--actor-telegram-id", type=int, required=True)
+    receipt_parser = subparsers.add_parser("set-expense-category-receipt")
+    receipt_parser.add_argument("--category-code", required=True)
+    receipt_parser.add_argument("--required", choices=("true", "false"), required=True)
+    receipt_parser.add_argument("--actor-telegram-id", type=int, required=True)
+    reverse_parser = subparsers.add_parser("reverse-expense")
+    reverse_parser.add_argument("--expense-id", type=int, required=True)
+    reverse_parser.add_argument("--reason", required=True)
+    reverse_parser.add_argument("--actor-telegram-id", type=int, required=True)
     args = parser.parse_args()
     settings = load_settings()
     if args.command == "init-db":
@@ -107,6 +125,41 @@ def main() -> None:
             session.add(UserRole(user_id=user.id, role_id=role.id))
             append_audit(session, action="USER_CREATED", entity_type="user", entity_id=str(user.id), actor=actor, new_values={"telegram_user_id": args.telegram_id, "display_name": user.display_name, "role": role.code})
             print(f"Added {user.display_name} as {role.code}.")
+        elif args.command == "set-expense-limit":
+            if not has_permission(session, actor, "settings.manage"):
+                raise SystemExit("Actor lacks settings.manage permission")
+            amount_minor = parse_money(args.amount, args.currency)
+            role = session.query(Role).filter_by(code=args.role).one() if args.role else None
+            target_user = get_user_by_telegram_id(session, args.user_telegram_id) if args.user_telegram_id else None
+            if args.user_telegram_id and target_user is None:
+                raise SystemExit("Target user is not active or does not exist")
+            query = session.query(ExpenseLimit).filter_by(currency=args.currency)
+            query = query.filter_by(role_id=role.id) if role else query.filter_by(user_id=target_user.id)
+            limit = query.one_or_none()
+            old_amount = limit.amount_minor if limit else None
+            if limit is None:
+                limit = ExpenseLimit(role_id=role.id if role else None, user_id=target_user.id if target_user else None, currency=args.currency, amount_minor=amount_minor, created_by_user_id=actor.id)
+                session.add(limit)
+            else:
+                limit.amount_minor = amount_minor
+                limit.is_active = True
+                limit.created_by_user_id = actor.id
+            session.flush()
+            append_audit(session, action="EXPENSE_LIMIT_SET", entity_type="expense_limit", entity_id=str(limit.id) if limit.id else None, actor=actor, old_values={"amount_minor": old_amount}, new_values={"amount_minor": amount_minor, "currency": args.currency, "role": args.role, "user_telegram_id": args.user_telegram_id})
+            print(f"Expense limit set to {args.amount} {args.currency}.")
+        elif args.command == "set-expense-category-receipt":
+            if not has_permission(session, actor, "settings.manage"):
+                raise SystemExit("Actor lacks settings.manage permission")
+            category = session.query(ExpenseCategory).filter_by(code=args.category_code.upper()).one_or_none()
+            if category is None:
+                raise SystemExit("Expense category not found")
+            old = category.receipt_required
+            category.receipt_required = args.required == "true"
+            append_audit(session, action="EXPENSE_CATEGORY_RECEIPT_POLICY_SET", entity_type="expense_category", entity_id=str(category.id), actor=actor, old_values={"receipt_required": old}, new_values={"receipt_required": category.receipt_required})
+            print(f"Receipt requirement for {category.code}: {category.receipt_required}.")
+        elif args.command == "reverse-expense":
+            expense, created = reverse_expense(session, actor=actor, expense_id=args.expense_id, reason=args.reason, idempotency_key=f"cli-reverse-expense:{uuid4()}")
+            print(f"Expense {expense.expense_number} {'reversed' if created else 'already reversed'}.")
 
 
 if __name__ == "__main__":
