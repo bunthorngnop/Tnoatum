@@ -6,7 +6,11 @@ Phase 3 local-Windows-first Telegram sales, controlled-expense, and physical-cas
 
 Implemented: the Phase 0/1 foundation, Phase 2 controlled expenses, and Phase 3 opening cash, expected cash, deposits, withdrawals, owner withdrawals, adjustments, retained-float evidence, repeated cash counts, discrepancies, cash history, permissions, audit, and idempotency.
 
-Not yet implemented: Phase 4 final closing and owner close notification, dashboard, automated DB backup/restore, OCR, voice, or AI.
+Implemented through Phase 4, including explicit closing, discrepancy explanations, immutable closing evidence, reopening audit, and owner notification. Dashboard, automated DB backup/restore, and deterministic convenience insights remain later phases.
+
+## Phase 4 closing
+
+Record a Phase 3 cash count, then use `/close_day` in Telegram. Review expected/actual KHR and USD plus ABA/KHQR, expenses, and movements. Finalize with `/confirm_close COUNT_ID KHR explanation | USD explanation`. Empty explanations are accepted only within configured tolerances. Closing is explicit; neither 17:00 nor midnight closes or splits a day.
 
 ## Local installation
 

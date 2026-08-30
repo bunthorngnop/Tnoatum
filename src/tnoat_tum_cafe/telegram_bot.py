@@ -436,10 +436,12 @@ def build_application(settings: Settings) -> Application:
     engine = create_database_engine(settings.database_url)
     from .telegram_expenses import build_approval_handler, build_expense_handler, expense_reply_command, startup_notification_dispatch
     from .telegram_cash import build_cash_handler
+    from .telegram_closing import closing_handlers
     application = ApplicationBuilder().token(settings.telegram_bot_token).post_init(startup_notification_dispatch).build()
     application.bot_data.update(settings=settings, session_factory=session_factory(engine))
     application.add_handler(build_expense_handler(), group=0)
     application.add_handler(build_cash_handler(), group=0)
+    for handler in closing_handlers(): application.add_handler(handler, group=1)
     application.add_handler(build_approval_handler(), group=1)
     application.add_handler(CommandHandler("expense_reply", expense_reply_command), group=1)
     conversation = ConversationHandler(

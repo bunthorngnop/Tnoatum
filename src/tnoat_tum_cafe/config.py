@@ -51,6 +51,11 @@ class Settings:
     require_receipt_for_all_expenses: bool = True
     expense_attachment_directory: Path = Path("receipts")
     max_expense_attachment_bytes: int = 10_000_000
+    closing_tolerance_khr_minor: int = 0
+    closing_tolerance_usd_minor: int = 0
+    dashboard_host: str = "127.0.0.1"
+    dashboard_port: int = 8000
+    dashboard_session_minutes: int = 30
 
     @property
     def timezone(self) -> ZoneInfo:
@@ -88,4 +93,9 @@ def load_settings(env_file: Path | None = None) -> Settings:
         require_receipt_for_all_expenses=os.getenv("REQUIRE_RECEIPT_FOR_ALL_EXPENSES", "true").strip().lower() in {"1", "true", "yes", "on"},
         expense_attachment_directory=Path(os.getenv("EXPENSE_ATTACHMENT_DIRECTORY", "receipts")),
         max_expense_attachment_bytes=max_attachment_bytes,
+        closing_tolerance_khr_minor=int(os.getenv("CLOSING_TOLERANCE_KHR", "0")),
+        closing_tolerance_usd_minor=int(os.getenv("CLOSING_TOLERANCE_USD_CENTS", "0")),
+        dashboard_host=os.getenv("DASHBOARD_HOST", "127.0.0.1"),
+        dashboard_port=int(os.getenv("DASHBOARD_PORT", "8000")),
+        dashboard_session_minutes=int(os.getenv("DASHBOARD_SESSION_MINUTES", "30")),
     )

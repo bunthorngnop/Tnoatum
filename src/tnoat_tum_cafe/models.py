@@ -526,6 +526,39 @@ class CashCount(Base):
     )
 
 
+class ClosingRecord(Base):
+    __tablename__ = "closing_records"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    business_day_id: Mapped[int] = mapped_column(ForeignKey("business_days.id", ondelete="RESTRICT"), unique=True)
+    cash_count_id: Mapped[int] = mapped_column(ForeignKey("cash_counts.id", ondelete="RESTRICT"))
+    expected_khr_minor: Mapped[int] = mapped_column(BigInteger)
+    actual_khr_minor: Mapped[int] = mapped_column(BigInteger)
+    difference_khr_minor: Mapped[int] = mapped_column(BigInteger)
+    expected_usd_minor: Mapped[int] = mapped_column(BigInteger)
+    actual_usd_minor: Mapped[int] = mapped_column(BigInteger)
+    difference_usd_minor: Mapped[int] = mapped_column(BigInteger)
+    aba_khr_minor: Mapped[int] = mapped_column(BigInteger)
+    aba_usd_minor: Mapped[int] = mapped_column(BigInteger)
+    expense_count: Mapped[int] = mapped_column(Integer)
+    cash_movement_count: Mapped[int] = mapped_column(Integer)
+    explanation_khr: Mapped[str | None] = mapped_column(Text)
+    explanation_usd: Mapped[str | None] = mapped_column(Text)
+    aba_confirmed: Mapped[bool] = mapped_column(Boolean)
+    closed_by_user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="RESTRICT"))
+    closed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    idempotency_key: Mapped[str] = mapped_column(String(160), unique=True)
+
+
+class BusinessDayReopening(Base):
+    __tablename__ = "business_day_reopenings"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    business_day_id: Mapped[int] = mapped_column(ForeignKey("business_days.id", ondelete="RESTRICT"))
+    reason: Mapped[str] = mapped_column(Text)
+    reopened_by_user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="RESTRICT"))
+    reopened_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    idempotency_key: Mapped[str] = mapped_column(String(160), unique=True)
+
+
 @event.listens_for(AuditLog, "before_update")
 @event.listens_for(AuditLog, "before_delete")
 def _prevent_audit_mutation(_mapper, _connection, _target) -> None:
@@ -540,7 +573,7 @@ def _prevent_financial_detail_update(_mapper, _connection, _target) -> None:
     raise ValueError("Posted financial details are immutable; use a reversal")
 
 
-for _immutable_detail in (SaleItem, SalePayment, LedgerEntry, SaleCorrection, ExpenseAttachment, ExpenseApprovalEvent, ExpenseCorrection, CashMovement, RetainedFloat, CashCount):
+for _immutable_detail in (SaleItem, SalePayment, LedgerEntry, SaleCorrection, ExpenseAttachment, ExpenseApprovalEvent, ExpenseCorrection, CashMovement, RetainedFloat, CashCount, ClosingRecord, BusinessDayReopening):
     event.listen(_immutable_detail, "before_update", _prevent_financial_detail_update)
     event.listen(_immutable_detail, "before_delete", _prevent_financial_delete)
 event.listen(Sale, "before_delete", _prevent_financial_delete)

@@ -65,3 +65,7 @@ python -m tnoat_tum_cafe.cli health
 Use `/cash` or tap `💵 CASH`. The menu provides Opening Cash, Cash Status, Deposit, Withdrawal, Owner Withdrawal, Adjustment, Cash Count, Cash History, and Retained Float. Numeric Telegram identity and configurable `cash.*` permissions authorize every operation.
 
 Opening KHR and USD are entered separately and cannot be silently overwritten. Adjustments require an explicit direction and reason. Cash Count requests actual KHR followed by actual USD, stores a new historical count, shows each discrepancy, and leaves the business day open. ABA/KHQR appears separately from physical cash.
+
+## Phase 4 closing
+
+Use `/close_day` after the final cash count. Review each currency and ABA/KHQR separately, then use the displayed `/confirm_close` syntax. Discrepancy explanations are required above configured tolerances. The closing notification is queued for every active Owner numeric Telegram identity.

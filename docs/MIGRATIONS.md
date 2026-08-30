@@ -24,3 +24,7 @@ Apply migrations only after making a separate verified copy of any live financia
 ## Phase 3
 
 `0004_phase3_cash_control` adds cash movements, retained-float decisions, and append-only cash counts. It is additive and does not replace the runtime database. Run `python -m alembic upgrade head`; expected current revision is `0004_phase3_cash_control`.
+
+## Phase 4
+
+`0005_phase4_closing` adds immutable closing records and audited reopening evidence. It preserves all transaction and cash-count history.
