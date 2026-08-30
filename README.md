@@ -6,7 +6,11 @@ Phase 3 local-Windows-first Telegram sales, controlled-expense, and physical-cas
 
 Implemented: the Phase 0/1 foundation, Phase 2 controlled expenses, and Phase 3 opening cash, expected cash, deposits, withdrawals, owner withdrawals, adjustments, retained-float evidence, repeated cash counts, discrepancies, cash history, permissions, audit, and idempotency.
 
-Implemented through Phase 5, including explicit closing, owner notification, and the protected local owner dashboard with separate-currency operational reports. Automated DB backup/restore and deterministic convenience insights remain later phases.
+Implemented through Phase 6, including closing, protected dashboard, verified timestamped SQLite backups, retention, and non-overwriting restore tooling. Deterministic convenience insights remain Phase 7.
+
+## Phase 6 backup and recovery
+
+Bot/dashboard startup performs at most one verified backup per UTC day. Manual commands are `backup-db`, `verify-backup`, and `restore-backup`. Restore only writes to a nonexistent target and never overwrites live data. See `docs/BACKUP_RESTORE.md`.
 
 ## Phase 4 closing
 

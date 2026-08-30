@@ -19,6 +19,7 @@ from .services.business_days import open_business_day
 from .services.catalog import import_catalog
 from .services.expenses import reverse_expense
 from .services.cash import cash_status, record_cash_count, record_cash_movement, record_retained_float, reverse_cash_movement
+from .services.backup import create_backup, ensure_daily_backup, restore_backup, verify_backup
 from .services.money import parse_money
 
 
@@ -26,6 +27,11 @@ def _upgrade() -> None:
     result = subprocess.run([sys.executable, "-m", "alembic", "upgrade", "head"], check=False)
     if result.returncode:
         raise SystemExit(result.returncode)
+
+def _daily_backup(settings) -> None:
+    engine=create_database_engine(settings.database_url)
+    with session_factory(engine)() as session,session.begin():
+        ensure_daily_backup(session,database_url=settings.database_url,backup_directory=settings.backup_directory,retention_days=settings.backup_retention_days)
 
 
 def main() -> None:
@@ -87,6 +93,13 @@ def main() -> None:
     reverse_cash_parser.add_argument("--movement-id", type=int, required=True)
     reverse_cash_parser.add_argument("--reason", required=True)
     reverse_cash_parser.add_argument("--actor-telegram-id", type=int, required=True)
+    backup_parser = subparsers.add_parser("backup-db")
+    backup_parser.add_argument("--actor-telegram-id", type=int, required=True)
+    verify_parser = subparsers.add_parser("verify-backup")
+    verify_parser.add_argument("path", type=Path)
+    restore_parser = subparsers.add_parser("restore-backup")
+    restore_parser.add_argument("backup", type=Path)
+    restore_parser.add_argument("target", type=Path)
     args = parser.parse_args()
     settings = load_settings()
     if args.command == "init-db":
@@ -95,14 +108,22 @@ def main() -> None:
     if args.command == "run-bot":
         if not settings.telegram_bot_token:
             raise SystemExit("TELEGRAM_BOT_TOKEN is missing from .env")
+        _daily_backup(settings)
         from .telegram_bot import run_bot
         run_bot(settings)
         return
     if args.command == "run-dashboard":
         if not settings.dashboard_access_token:
             raise SystemExit("DASHBOARD_ACCESS_TOKEN is missing from .env")
+        _daily_backup(settings)
         from .dashboard import run_dashboard
         run_dashboard(settings)
+        return
+    if args.command == "verify-backup":
+        print(verify_backup(args.path))
+        return
+    if args.command == "restore-backup":
+        print(restore_backup(backup_path=args.backup, target_path=args.target))
         return
     engine = create_database_engine(settings.database_url)
     if args.command == "health":
@@ -207,6 +228,9 @@ def main() -> None:
         elif args.command == "reverse-cash":
             movement, created = reverse_cash_movement(session, actor=actor, movement_id=args.movement_id, reason=args.reason, idempotency_key=f"cli-reverse-cash:{uuid4()}")
             print(f"Cash reversal #{movement.id} {'recorded' if created else 'already recorded'}.")
+        elif args.command == "backup-db":
+            backup = create_backup(session, actor=actor, database_url=settings.database_url, backup_directory=settings.backup_directory, retention_days=settings.backup_retention_days)
+            print(f"Verified backup created: {backup.relative_path} ({backup.size_bytes} bytes).")
 
 
 if __name__ == "__main__":

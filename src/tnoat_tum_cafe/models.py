@@ -559,6 +559,17 @@ class BusinessDayReopening(Base):
     idempotency_key: Mapped[str] = mapped_column(String(160), unique=True)
 
 
+class BackupMetadata(Base):
+    __tablename__ = "backup_metadata"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    relative_path: Mapped[str] = mapped_column(String(500), unique=True)
+    size_bytes: Mapped[int] = mapped_column(BigInteger)
+    sha256: Mapped[str] = mapped_column(String(64))
+    integrity_ok: Mapped[bool] = mapped_column(Boolean)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    created_by_user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="RESTRICT"))
+
+
 @event.listens_for(AuditLog, "before_update")
 @event.listens_for(AuditLog, "before_delete")
 def _prevent_audit_mutation(_mapper, _connection, _target) -> None:
@@ -573,7 +584,7 @@ def _prevent_financial_detail_update(_mapper, _connection, _target) -> None:
     raise ValueError("Posted financial details are immutable; use a reversal")
 
 
-for _immutable_detail in (SaleItem, SalePayment, LedgerEntry, SaleCorrection, ExpenseAttachment, ExpenseApprovalEvent, ExpenseCorrection, CashMovement, RetainedFloat, CashCount, ClosingRecord, BusinessDayReopening):
+for _immutable_detail in (SaleItem, SalePayment, LedgerEntry, SaleCorrection, ExpenseAttachment, ExpenseApprovalEvent, ExpenseCorrection, CashMovement, RetainedFloat, CashCount, ClosingRecord, BusinessDayReopening, BackupMetadata):
     event.listen(_immutable_detail, "before_update", _prevent_financial_detail_update)
     event.listen(_immutable_detail, "before_delete", _prevent_financial_delete)
 event.listen(Sale, "before_delete", _prevent_financial_delete)

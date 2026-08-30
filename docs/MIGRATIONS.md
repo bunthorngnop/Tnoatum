@@ -28,3 +28,7 @@ Apply migrations only after making a separate verified copy of any live financia
 ## Phase 4
 
 `0005_phase4_closing` adds immutable closing records and audited reopening evidence. It preserves all transaction and cash-count history.
+
+## Phase 6
+
+`0006_phase6_backup_metadata` records verified local backup generations and hashes. Backup database files remain ignored and outside source control.

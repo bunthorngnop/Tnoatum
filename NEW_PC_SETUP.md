@@ -23,6 +23,7 @@ GitHub synchronizes source code. It does **not** back up or transfer the live fi
 
 6. Follow `docs/TELEGRAM_SETUP.md` to load an owner-verified catalog, configure owner-approved expense policies, open the business day, confirm opening cash, and start the bot.
 7. Set a unique local `DASHBOARD_ACCESS_TOKEN`, run `python -m tnoat_tum_cafe.cli run-dashboard`, and open `http://127.0.0.1:8000`.
+8. If recovering financial history, follow `docs/BACKUP_RESTORE.md`; restore to a new path, migrate, health-check, and inspect it before adoption.
 
 ## Updating an existing PC
 
