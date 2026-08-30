@@ -6,7 +6,11 @@ Phase 3 local-Windows-first Telegram sales, controlled-expense, and physical-cas
 
 Implemented: the Phase 0/1 foundation, Phase 2 controlled expenses, and Phase 3 opening cash, expected cash, deposits, withdrawals, owner withdrawals, adjustments, retained-float evidence, repeated cash counts, discrepancies, cash history, permissions, audit, and idempotency.
 
-Implemented through Phase 6, including closing, protected dashboard, verified timestamped SQLite backups, retention, and non-overwriting restore tooling. Deterministic convenience insights remain Phase 7.
+Version 1 Phases 0–7 are implemented: sales, controlled expenses, cash, closing, protected dashboard/reports, verified backup/recovery, and deterministic local convenience insights.
+
+## Phase 7 local convenience
+
+Recent/frequent/favorite products, common OPEN_PRICE history, aliases/fuzzy lookup, trends, operational indicators, staff statistics, and advisory manual-item suggestions use deterministic local logic only. See `docs/LOCAL_INSIGHTS.md`. No official menu, price, permission, or financial history is silently changed.
 
 ## Phase 6 backup and recovery
 

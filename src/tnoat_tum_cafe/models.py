@@ -570,6 +570,36 @@ class BackupMetadata(Base):
     created_by_user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="RESTRICT"))
 
 
+class ProductAlias(Base):
+    __tablename__ = "product_aliases"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    product_id: Mapped[int] = mapped_column(ForeignKey("products.id", ondelete="RESTRICT"))
+    alias: Mapped[str] = mapped_column(String(160), unique=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    created_by_user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="RESTRICT"))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+
+
+class ProductFavorite(Base):
+    __tablename__ = "product_favorites"
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="RESTRICT"), primary_key=True)
+    product_id: Mapped[int] = mapped_column(ForeignKey("products.id", ondelete="RESTRICT"), primary_key=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+
+
+class SmartSuggestion(Base):
+    __tablename__ = "smart_suggestions"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    suggestion_type: Mapped[str] = mapped_column(String(40))
+    key: Mapped[str] = mapped_column(String(200), unique=True)
+    payload_json: Mapped[dict[str, Any]] = mapped_column(JSON)
+    status: Mapped[str] = mapped_column(String(16), default="PENDING")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    decided_by_user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="RESTRICT"))
+    __table_args__ = (CheckConstraint("status IN ('PENDING','ACCEPTED','IGNORED')",name="ck_smart_suggestion_status"),)
+
+
 @event.listens_for(AuditLog, "before_update")
 @event.listens_for(AuditLog, "before_delete")
 def _prevent_audit_mutation(_mapper, _connection, _target) -> None:

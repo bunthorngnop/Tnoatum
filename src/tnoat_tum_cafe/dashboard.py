@@ -12,6 +12,7 @@ from .models import AuditLog, BusinessDay, CashCount, ClosingRecord, DiscountRul
 from .services.audit import append_audit
 from .services.auth import get_user_by_telegram_id, has_permission
 from .services.money import format_money
+from .services.insights import owner_insights,refresh_manual_item_suggestions
 
 def _summary(session:Session,start:date|None=None,end:date|None=None)->dict:
     days=select(BusinessDay.id)
@@ -63,6 +64,11 @@ def create_dashboard_app(settings:Settings|None=None)->FastAPI:
     def closings(session:Session=Depends(db)): return [{"id":x.id,"business_day_id":x.business_day_id,"khr_difference":x.difference_khr_minor,"usd_difference":x.difference_usd_minor,"closed_at":x.closed_at} for x in session.scalars(select(ClosingRecord).order_by(ClosingRecord.id.desc()))]
     @app.get("/api/audit",dependencies=[Depends(auth)])
     def audit(session:Session=Depends(db)): return [{"id":x.id,"action":x.action,"entity_type":x.entity_type,"entity_id":x.entity_id,"occurred_at":x.occurred_at} for x in session.scalars(select(AuditLog).order_by(AuditLog.id.desc()).limit(200))]
+    @app.get("/api/insights",dependencies=[Depends(auth)])
+    def insights(actor_telegram_id:int=Header(alias="X-Actor-Telegram-ID"),session:Session=Depends(db)):
+        actor=get_user_by_telegram_id(session,actor_telegram_id)
+        if not actor: raise HTTPException(403,"Authorized numeric Telegram actor required")
+        refresh_manual_item_suggestions(session); result=owner_insights(session,actor=actor); session.commit(); return result
     @app.post("/api/products/{product_id}/price",dependencies=[Depends(auth)])
     def update_price(product_id:int,amount_minor:int,currency:str,actor_telegram_id:int=Header(alias="X-Actor-Telegram-ID"),session:Session=Depends(db)):
         actor=get_user_by_telegram_id(session,actor_telegram_id)

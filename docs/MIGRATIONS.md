@@ -32,3 +32,7 @@ Apply migrations only after making a separate verified copy of any live financia
 ## Phase 6
 
 `0006_phase6_backup_metadata` records verified local backup generations and hashes. Backup database files remain ignored and outside source control.
+
+## Phase 7
+
+`0007_phase7_smart_local` adds product aliases, personal favorites, and advisory suggestion decisions. It does not modify posted financial history.
