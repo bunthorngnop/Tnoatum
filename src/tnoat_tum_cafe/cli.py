@@ -18,6 +18,7 @@ from .services.auth import get_user_by_telegram_id, has_permission
 from .services.business_days import open_business_day
 from .services.catalog import import_catalog
 from .services.expenses import reverse_expense
+from .services.cash import cash_status, record_cash_count, record_cash_movement, record_retained_float, reverse_cash_movement
 from .services.money import parse_money
 
 
@@ -64,6 +65,28 @@ def main() -> None:
     reverse_parser.add_argument("--expense-id", type=int, required=True)
     reverse_parser.add_argument("--reason", required=True)
     reverse_parser.add_argument("--actor-telegram-id", type=int, required=True)
+    cash_parser = subparsers.add_parser("record-cash")
+    cash_parser.add_argument("--type", choices=("OPENING_FLOAT", "DEPOSIT", "WITHDRAWAL", "OWNER_WITHDRAWAL", "ADJUSTMENT"), required=True)
+    cash_parser.add_argument("--direction", choices=("INFLOW", "OUTFLOW"))
+    cash_parser.add_argument("--currency", choices=("KHR", "USD"), required=True)
+    cash_parser.add_argument("--amount", required=True)
+    cash_parser.add_argument("--reason", required=True)
+    cash_parser.add_argument("--actor-telegram-id", type=int, required=True)
+    cash_status_parser = subparsers.add_parser("cash-status")
+    cash_status_parser.add_argument("--actor-telegram-id", type=int, required=True)
+    count_parser = subparsers.add_parser("cash-count")
+    count_parser.add_argument("--khr", required=True)
+    count_parser.add_argument("--usd", required=True)
+    count_parser.add_argument("--actor-telegram-id", type=int, required=True)
+    retained_parser = subparsers.add_parser("record-retained-float")
+    retained_parser.add_argument("--currency", choices=("KHR", "USD"), required=True)
+    retained_parser.add_argument("--amount", required=True)
+    retained_parser.add_argument("--reason", required=True)
+    retained_parser.add_argument("--actor-telegram-id", type=int, required=True)
+    reverse_cash_parser = subparsers.add_parser("reverse-cash")
+    reverse_cash_parser.add_argument("--movement-id", type=int, required=True)
+    reverse_cash_parser.add_argument("--reason", required=True)
+    reverse_cash_parser.add_argument("--actor-telegram-id", type=int, required=True)
     args = parser.parse_args()
     settings = load_settings()
     if args.command == "init-db":
@@ -160,6 +183,24 @@ def main() -> None:
         elif args.command == "reverse-expense":
             expense, created = reverse_expense(session, actor=actor, expense_id=args.expense_id, reason=args.reason, idempotency_key=f"cli-reverse-expense:{uuid4()}")
             print(f"Expense {expense.expense_number} {'reversed' if created else 'already reversed'}.")
+        elif args.command == "record-cash":
+            direction = args.direction or ("INFLOW" if args.type in {"OPENING_FLOAT", "DEPOSIT"} else "OUTFLOW")
+            if args.type == "ADJUSTMENT" and args.direction is None:
+                raise SystemExit("--direction is required for ADJUSTMENT")
+            movement, created = record_cash_movement(session, actor=actor, movement_type=args.type, direction=direction, amount_minor=parse_money(args.amount, args.currency), currency=args.currency, reason=args.reason, idempotency_key=f"cli-cash:{uuid4()}")
+            print(f"Cash movement #{movement.id} {'recorded' if created else 'already recorded'}.")
+        elif args.command == "cash-status":
+            status = cash_status(session, actor=actor)
+            print(f"KHR expected={status.expected_khr_minor}; USD expected={status.expected_usd_minor}; ABA KHR={status.aba_khr_minor}; ABA USD={status.aba_usd_minor}")
+        elif args.command == "cash-count":
+            count, created = record_cash_count(session, actor=actor, actual_khr_minor=parse_money(args.khr, "KHR"), actual_usd_minor=parse_money(args.usd, "USD"), idempotency_key=f"cli-cash-count:{uuid4()}")
+            print(f"Cash count #{count.id} {'recorded' if created else 'already recorded'}; KHR difference={count.difference_khr_minor}; USD difference={count.difference_usd_minor}.")
+        elif args.command == "record-retained-float":
+            retained, created = record_retained_float(session, actor=actor, currency=args.currency, amount_minor=parse_money(args.amount, args.currency), reason=args.reason, idempotency_key=f"cli-retained:{uuid4()}")
+            print(f"Retained float #{retained.id} {'recorded' if created else 'already recorded'}; confirmation is still required for a future opening.")
+        elif args.command == "reverse-cash":
+            movement, created = reverse_cash_movement(session, actor=actor, movement_id=args.movement_id, reason=args.reason, idempotency_key=f"cli-reverse-cash:{uuid4()}")
+            print(f"Cash reversal #{movement.id} {'recorded' if created else 'already recorded'}.")
 
 
 if __name__ == "__main__":

@@ -21,7 +21,7 @@ GitHub synchronizes source code. It does **not** back up or transfer the live fi
    python -m tnoat_tum_cafe.cli bootstrap
    ```
 
-6. Follow `docs/TELEGRAM_SETUP.md` to load an owner-verified catalog, configure owner-approved expense limits/receipt policies, open the business day, and start the bot.
+6. Follow `docs/TELEGRAM_SETUP.md` to load an owner-verified catalog, configure owner-approved expense policies, open the business day, confirm opening cash, and start the bot.
 
 ## Updating an existing PC
 
@@ -30,3 +30,5 @@ Close the running app, confirm your source tree has no uncommitted work, then do
 ## Live financial data
 
 Do not copy a database over an active database. Phase 6 will add verified database backup/restore tooling and retention. Until then, database restoration is not an owner-safe automated workflow.
+
+Phase 3 database setup is included in the normal migration step. After setup, an authorized owner can open Telegram and use `/cash`. Do not copy a live SQLite database through GitHub; source synchronization and financial-data backup remain separate systems.

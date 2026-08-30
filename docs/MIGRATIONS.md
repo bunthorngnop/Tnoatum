@@ -21,3 +21,6 @@ Apply migrations only after making a separate verified copy of any live financia
 - Approved/within-authority posted expenses create explicit `EXPENSE` outflows; reversals create linked `EXPENSE_REVERSAL` inflows.
 - Uploaded receipt files remain outside Git in the ignored configured runtime directory.
 - Never downgrade a database containing expense requests or posted expenses.
+## Phase 3
+
+`0004_phase3_cash_control` adds cash movements, retained-float decisions, and append-only cash counts. It is additive and does not replace the runtime database. Run `python -m alembic upgrade head`; expected current revision is `0004_phase3_cash_control`.

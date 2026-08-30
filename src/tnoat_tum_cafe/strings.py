@@ -10,6 +10,7 @@ CORRECT_LAST = "↩️ Correct Last Sale / កែការលក់ចុងក�
 NEW_EXPENSE = "💸 EXPENSE / ចំណាយ"
 MY_EXPENSES = "🧾 MY EXPENSES / ចំណាយខ្ញុំ"
 PENDING_APPROVALS = "⏳ APPROVALS / រង់ចាំអនុម័ត"
+CASH = "💵 CASH / សាច់ប្រាក់"
 CART = "🛒 Cart / កន្ត្រក"
 ADD_MORE = "➕ Add More / បន្ថែម"
 CONFIRM = "✅ Confirm Sale / បញ្ជាក់"

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "tnoat-tum-cafe"
-version = "0.2.0"
+version = "0.3.0"
 description = "Local-first finance foundation for Tnoat Tum Cafe"
 requires-python = ">=3.11"
 dependencies = [

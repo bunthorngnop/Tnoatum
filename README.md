@@ -1,12 +1,12 @@
 # Tnoat Tum Cafe
 
-Phase 2 local-Windows-first Telegram sales and controlled-expense system. The authoritative requirements are in `TNOAT_TUM_CAFE_CODEX_MASTER_BUILD_PROMPT.md`.
+Phase 3 local-Windows-first Telegram sales, controlled-expense, and physical-cash system. The authoritative requirements are in `TNOAT_TUM_CAFE_CODEX_MASTER_BUILD_PROMPT.md`.
 
 ## Current scope
 
-Implemented: the Phase 0/1 foundation plus configurable expense categories and authority limits, exact KHR/USD expenses, Cash/ABA separation, receipt attachments, pending approvals, owner approve/reject/ask-question flows, requester replies/notifications, immutable expense history, and controlled reversals.
+Implemented: the Phase 0/1 foundation, Phase 2 controlled expenses, and Phase 3 opening cash, expected cash, deposits, withdrawals, owner withdrawals, adjustments, retained-float evidence, repeated cash counts, discrepancies, cash history, permissions, audit, and idempotency.
 
-Not yet implemented: opening/expected cash, final closing, dashboard, automated DB backup/restore, OCR, voice, or AI.
+Not yet implemented: Phase 4 final closing and owner close notification, dashboard, automated DB backup/restore, OCR, voice, or AI.
 
 ## Local installation
 
@@ -98,7 +98,7 @@ The default runtime database is `data/tnoat_tum_cafe.sqlite3`, excluded from Git
 python -m alembic upgrade head
 ```
 
-Migration `0001_phase0_foundation` creates identity and audit foundations. Migration `0002_phase1_sales` adds sales. Migration `0003_phase2_expenses` adds categories, limits, requests, attachments, approval events, expenses, corrections, and durable notification outbox records. Never edit financial history directly or replace a live database during a source update.
+Migration `0001_phase0_foundation` creates identity and audit foundations. Migration `0002_phase1_sales` adds sales. Migration `0003_phase2_expenses` adds controlled expenses. Migration `0004_phase3_cash_control` adds immutable cash movements, retained-float evidence, and cash counts. Never edit financial history directly or replace a live database during a source update.
 
 ## GitHub workflows
 
@@ -117,3 +117,19 @@ GitHub is not a financial database backup. The runtime DB and `backups/` are ign
 ## Owner/admin and Telegram setup
 
 Numeric Telegram user IDs are authoritative. `/myid` reports the sender's numeric ID but grants no access. All other flows require an active configured user. Secrets remain in `.env`; Telegram long polling starts with `python -m tnoat_tum_cafe.cli run-bot`.
+## Phase 3 cash control
+
+Phase 3 records KHR and USD physical cash independently. Opening floats, deposits, withdrawals, owner withdrawals, and authorized adjustments are immutable cash movements backed by ledger entries. ABA/KHQR is reported separately and never enters the physical drawer calculation. Cash counts snapshot expected and actual amounts without closing the business day or changing financial history.
+
+Telegram provides `/cash` and a button-first Cash menu. Owner/Admin receives all `cash.*` permissions. Other role permissions remain configurable through the existing permission tables and are not assumed.
+
+Useful administration commands:
+
+```powershell
+python -m tnoat_tum_cafe.cli record-cash --type OPENING_FLOAT --currency KHR --amount 300000 --reason "Confirmed opening float" --actor-telegram-id 166792174
+python -m tnoat_tum_cafe.cli cash-status --actor-telegram-id 166792174
+python -m tnoat_tum_cafe.cli cash-count --khr 300000 --usd 25.00 --actor-telegram-id 166792174
+python -m tnoat_tum_cafe.cli record-retained-float --currency KHR --amount 300000 --reason "Suggested next-day float" --actor-telegram-id 166792174
+```
+
+The amounts above are syntax examples only. They are not configured business rules.

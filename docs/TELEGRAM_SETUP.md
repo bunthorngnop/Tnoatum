@@ -60,3 +60,8 @@ ABA/KHQR ledger entries remain distinct from Cash. Cross-currency split payment 
 python -m pytest
 python -m tnoat_tum_cafe.cli health
 ```
+## Phase 3 cash interface
+
+Use `/cash` or tap `💵 CASH`. The menu provides Opening Cash, Cash Status, Deposit, Withdrawal, Owner Withdrawal, Adjustment, Cash Count, Cash History, and Retained Float. Numeric Telegram identity and configurable `cash.*` permissions authorize every operation.
+
+Opening KHR and USD are entered separately and cannot be silently overwritten. Adjustments require an explicit direction and reason. Cash Count requests actual KHR followed by actual USD, stores a new historical count, shows each discrepancy, and leaves the business day open. ABA/KHQR appears separately from physical cash.

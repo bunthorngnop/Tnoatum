@@ -27,6 +27,7 @@ def _main_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([
         [InlineKeyboardButton(strings.NEW_SALE, callback_data="main:new")],
         [InlineKeyboardButton(strings.NEW_EXPENSE, callback_data="main:expense")],
+        [InlineKeyboardButton(strings.CASH, callback_data="main:cash")],
         [InlineKeyboardButton(strings.MY_ACCOUNT, callback_data="main:account")],
         [InlineKeyboardButton(strings.MY_EXPENSES, callback_data="main:myexpenses"), InlineKeyboardButton(strings.PENDING_APPROVALS, callback_data="main:approvals")],
         [InlineKeyboardButton(strings.CORRECT_LAST, callback_data="main:correct")],
@@ -434,9 +435,11 @@ def build_application(settings: Settings) -> Application:
         raise ValueError("TELEGRAM_BOT_TOKEN is required to build the live Telegram application")
     engine = create_database_engine(settings.database_url)
     from .telegram_expenses import build_approval_handler, build_expense_handler, expense_reply_command, startup_notification_dispatch
+    from .telegram_cash import build_cash_handler
     application = ApplicationBuilder().token(settings.telegram_bot_token).post_init(startup_notification_dispatch).build()
     application.bot_data.update(settings=settings, session_factory=session_factory(engine))
     application.add_handler(build_expense_handler(), group=0)
+    application.add_handler(build_cash_handler(), group=0)
     application.add_handler(build_approval_handler(), group=1)
     application.add_handler(CommandHandler("expense_reply", expense_reply_command), group=1)
     conversation = ConversationHandler(

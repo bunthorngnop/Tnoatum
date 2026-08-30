@@ -58,6 +58,15 @@ class ExpensePaymentSource(StrEnum):
     ABA_KHQR = "ABA_KHQR"
 
 
+class CashMovementType(StrEnum):
+    OPENING_FLOAT = "OPENING_FLOAT"
+    DEPOSIT = "DEPOSIT"
+    WITHDRAWAL = "WITHDRAWAL"
+    OWNER_WITHDRAWAL = "OWNER_WITHDRAWAL"
+    ADJUSTMENT = "ADJUSTMENT"
+    REVERSAL = "REVERSAL"
+
+
 class Role(Base):
     __tablename__ = "roles"
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -457,6 +466,66 @@ class NotificationOutbox(Base):
     attempts: Mapped[int] = mapped_column(Integer, default=0)
 
 
+class CashMovement(Base):
+    __tablename__ = "cash_movements"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    business_day_id: Mapped[int] = mapped_column(ForeignKey("business_days.id", ondelete="RESTRICT"))
+    movement_type: Mapped[str] = mapped_column(String(24))
+    direction: Mapped[str] = mapped_column(String(12))
+    amount_minor: Mapped[int] = mapped_column(BigInteger)
+    currency: Mapped[str] = mapped_column(String(3))
+    reason: Mapped[str] = mapped_column(Text)
+    actor_user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="RESTRICT"))
+    related_entity_type: Mapped[str | None] = mapped_column(String(40))
+    related_entity_id: Mapped[str | None] = mapped_column(String(80))
+    approved_by_user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="RESTRICT"))
+    reversed_movement_id: Mapped[int | None] = mapped_column(ForeignKey("cash_movements.id", ondelete="RESTRICT"), unique=True)
+    idempotency_key: Mapped[str] = mapped_column(String(160), unique=True)
+    occurred_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    __table_args__ = (
+        CheckConstraint("movement_type IN ('OPENING_FLOAT','DEPOSIT','WITHDRAWAL','OWNER_WITHDRAWAL','ADJUSTMENT','REVERSAL')", name="ck_cash_movement_type"),
+        CheckConstraint("direction IN ('INFLOW','OUTFLOW')", name="ck_cash_movement_direction"),
+        CheckConstraint("amount_minor > 0", name="ck_cash_movement_amount"),
+        CheckConstraint("currency IN ('KHR','USD')", name="ck_cash_movement_currency"),
+        Index("uq_cash_opening_currency_day", "business_day_id", "currency", unique=True, sqlite_where=text("movement_type = 'OPENING_FLOAT'")),
+        Index("ix_cash_movement_day_currency", "business_day_id", "currency"),
+    )
+
+
+class RetainedFloat(Base):
+    __tablename__ = "retained_floats"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    business_day_id: Mapped[int] = mapped_column(ForeignKey("business_days.id", ondelete="RESTRICT"))
+    currency: Mapped[str] = mapped_column(String(3))
+    amount_minor: Mapped[int] = mapped_column(BigInteger)
+    reason: Mapped[str] = mapped_column(Text)
+    actor_user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="RESTRICT"))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    idempotency_key: Mapped[str] = mapped_column(String(160), unique=True)
+    __table_args__ = (
+        CheckConstraint("currency IN ('KHR','USD')", name="ck_retained_float_currency"),
+        CheckConstraint("amount_minor >= 0", name="ck_retained_float_amount"),
+    )
+
+
+class CashCount(Base):
+    __tablename__ = "cash_counts"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    business_day_id: Mapped[int] = mapped_column(ForeignKey("business_days.id", ondelete="RESTRICT"))
+    actual_khr_minor: Mapped[int] = mapped_column(BigInteger)
+    actual_usd_minor: Mapped[int] = mapped_column(BigInteger)
+    expected_khr_minor: Mapped[int] = mapped_column(BigInteger)
+    expected_usd_minor: Mapped[int] = mapped_column(BigInteger)
+    difference_khr_minor: Mapped[int] = mapped_column(BigInteger)
+    difference_usd_minor: Mapped[int] = mapped_column(BigInteger)
+    counted_by_user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="RESTRICT"))
+    counted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    idempotency_key: Mapped[str] = mapped_column(String(160), unique=True)
+    __table_args__ = (
+        CheckConstraint("actual_khr_minor >= 0 AND actual_usd_minor >= 0", name="ck_cash_count_actual_nonnegative"),
+    )
+
+
 @event.listens_for(AuditLog, "before_update")
 @event.listens_for(AuditLog, "before_delete")
 def _prevent_audit_mutation(_mapper, _connection, _target) -> None:
@@ -471,7 +540,7 @@ def _prevent_financial_detail_update(_mapper, _connection, _target) -> None:
     raise ValueError("Posted financial details are immutable; use a reversal")
 
 
-for _immutable_detail in (SaleItem, SalePayment, LedgerEntry, SaleCorrection, ExpenseAttachment, ExpenseApprovalEvent, ExpenseCorrection):
+for _immutable_detail in (SaleItem, SalePayment, LedgerEntry, SaleCorrection, ExpenseAttachment, ExpenseApprovalEvent, ExpenseCorrection, CashMovement, RetainedFloat, CashCount):
     event.listen(_immutable_detail, "before_update", _prevent_financial_detail_update)
     event.listen(_immutable_detail, "before_delete", _prevent_financial_delete)
 event.listen(Sale, "before_delete", _prevent_financial_delete)
