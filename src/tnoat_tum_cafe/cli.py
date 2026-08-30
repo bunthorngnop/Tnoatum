@@ -31,7 +31,7 @@ def _upgrade() -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(description="Tnoat Tum Cafe Phase 0 administration")
     subparsers = parser.add_subparsers(dest="command", required=True)
-    for command in ("init-db", "bootstrap", "health", "run-bot"):
+    for command in ("init-db", "bootstrap", "health", "run-bot", "run-dashboard"):
         subparsers.add_parser(command)
     catalog = subparsers.add_parser("import-catalog")
     catalog.add_argument("path", type=Path)
@@ -97,6 +97,12 @@ def main() -> None:
             raise SystemExit("TELEGRAM_BOT_TOKEN is missing from .env")
         from .telegram_bot import run_bot
         run_bot(settings)
+        return
+    if args.command == "run-dashboard":
+        if not settings.dashboard_access_token:
+            raise SystemExit("DASHBOARD_ACCESS_TOKEN is missing from .env")
+        from .dashboard import run_dashboard
+        run_dashboard(settings)
         return
     engine = create_database_engine(settings.database_url)
     if args.command == "health":

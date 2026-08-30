@@ -56,6 +56,7 @@ class Settings:
     dashboard_host: str = "127.0.0.1"
     dashboard_port: int = 8000
     dashboard_session_minutes: int = 30
+    dashboard_access_token: str = ""
 
     @property
     def timezone(self) -> ZoneInfo:
@@ -98,4 +99,5 @@ def load_settings(env_file: Path | None = None) -> Settings:
         dashboard_host=os.getenv("DASHBOARD_HOST", "127.0.0.1"),
         dashboard_port=int(os.getenv("DASHBOARD_PORT", "8000")),
         dashboard_session_minutes=int(os.getenv("DASHBOARD_SESSION_MINUTES", "30")),
+        dashboard_access_token=os.getenv("DASHBOARD_ACCESS_TOKEN", "").strip(),
     )

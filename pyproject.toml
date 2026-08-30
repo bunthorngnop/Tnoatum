@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "tnoat-tum-cafe"
-version = "0.4.0"
+version = "0.5.0"
 description = "Local-first finance foundation for Tnoat Tum Cafe"
 requires-python = ">=3.11"
 dependencies = [
@@ -13,6 +13,9 @@ dependencies = [
   "python-telegram-bot>=22,<23",
   "SQLAlchemy>=2.0,<3",
   "tzdata>=2025.2",
+  "fastapi>=0.116,<1",
+  "uvicorn>=0.35,<1",
+  "python-multipart>=0.0.20,<1",
 ]
 
 [project.optional-dependencies]
