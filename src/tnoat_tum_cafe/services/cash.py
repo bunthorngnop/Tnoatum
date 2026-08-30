@@ -2,11 +2,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime
+from uuid import uuid4
 
 from sqlalchemy import case, func, select
 from sqlalchemy.orm import Session
 
-from ..models import CashCount, CashMovement, CashMovementType, Currency, IdempotencyRecord, LedgerEntry, PaymentMethod, RetainedFloat, User, utc_now
+from ..models import AuditLog, CashCount, CashMovement, CashMovementType, Currency, IdempotencyRecord, LedgerEntry, PaymentMethod, RetainedFloat, User, utc_now
 from .audit import append_audit
 from .auth import has_permission
 from .business_days import business_day_for_transaction
@@ -40,7 +41,9 @@ def _validate_key(value: str) -> str:
 
 def _require(session: Session, actor: User, permission: str) -> None:
     if not actor.is_active or not has_permission(session, actor, permission):
-        append_audit(session, action="CASH_PERMISSION_DENIED", entity_type="permission", entity_id=permission, actor=actor, new_values={"permission": permission})
+        # Denial evidence must survive the rejected financial transaction.
+        with Session(session.get_bind()) as audit_session, audit_session.begin():
+            audit_session.add(AuditLog(actor_user_id=actor.id, actor_telegram_user_id=actor.telegram_user_id, action="CASH_PERMISSION_DENIED", entity_type="permission", entity_id=permission, new_values={"permission": permission}, correlation_id=str(uuid4())))
         raise PermissionError(f"User lacks {permission} permission")
 
 

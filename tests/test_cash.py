@@ -136,6 +136,7 @@ def test_adjustment_requires_reason(cash_setup, session):
 def test_unauthorized_cash_action_blocked(cash_setup, session):
     with pytest.raises(PermissionError):
         record_cash_movement(session, actor=cash_setup["staff"], movement_type="DEPOSIT", direction="INFLOW", amount_minor=1, currency="KHR", reason="No authority", idempotency_key="blocked")
+    assert session.scalar(select(AuditLog).where(AuditLog.action == "CASH_PERMISSION_DENIED", AuditLog.actor_user_id == cash_setup["staff"].id))
 
 
 def test_duplicate_callback_is_idempotent(cash_setup, session):
